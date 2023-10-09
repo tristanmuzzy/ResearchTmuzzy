@@ -1,0 +1,42 @@
+
+#---------initialization---------
+
+units 		real
+dimension	3
+boundary	p p p
+atom_style	molecular
+
+#--------force-field------------
+bond_style      harmonic
+angle_style     harmonic
+dihedral_style  opls
+
+pair_style      lj/cut 10.0
+read_data       1_ethane.mol
+
+#-----------settings------------
+
+timestep        1
+variable        Time equal step*dt/1000 #time in picoseconds
+thermo_style    custom step v_Time temp press etotal ke pe ebond eangle edihed evdwl
+
+fix             1 all nvt temp 300 300 100000
+fix             2 all momentum 250 linear 1 1 1 angular #every 25 fs
+
+#------------run------------
+
+#NOTE: time (and velocity) do not exist in a minimization
+dump            1 all atom 10 one_ethane_minimization.lammpstrj #every 10 steps 
+dump_modify     1 scale no sort id
+min_style       cg
+minimize        1.0e-4 1.0e-6 100 1000
+undump          1
+reset_timestep  0
+
+velocity 	all create 300 4928459 rot yes mom yes 
+thermo          1000 #every picosecond
+log             1_ethane_dynamics.log.lammps
+dump            1 all atom 1000 1_ethane_dynamics.lammpstrj #every picosecond
+dump_modify     1 scale no sort id
+run             400000 #400 picoseconds
+write_restart   *1_ethane_dynamics.restart
